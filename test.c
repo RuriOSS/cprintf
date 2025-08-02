@@ -30,6 +30,7 @@
 #include "include/cprintf.h"
 int main(void)
 {
+	/*
 	cprintf("%s %s %d %s %d{clear}\n\n\n",
 		"{black}ehi{114;5;14}bfwvjbkuiew{red}fgLCUEUIGvli{white}uEGFVLI{green}ILWR{yellow}Hvbi{blue}HVIBU{purple}WBHC{cyan}wvlrjvkjnvkjdcbvljb{clear}cjbskdjlvbjasf",
 		"xxxxxxxxxxxxxxxxxxx[underline]xxxxxxxxx[clear]xx{cyan}xxxxx[highlight]xx{cyan}xxxx{base}xxxxxxxxxxxxx",
@@ -103,4 +104,11 @@ int main(void)
 	cprintf("{}{}{}{}{}{}{}\n", "x", T(1));
 	cprintf("{red}red{green}green{blue}blue{yellow}yellow{purple}purple{cyan}cyan{white}white{black}black{clear}\n");
 	cprintf("[red]red[green]green[blue]blue[yellow]yellow[purple]purple[cyan]cyan[white]white[black]black[clear]\n");
+	*/
+	if (cp_xterm_is_dark_mode()) {
+		cprintf("{green}Dark mode is enabled\n");
+	} else {
+		cprintf("{red}Dark mode is not enabled{clear}\n");
+	}
+	// cprintf("cprintf version: %d.%d\n", CPRINTF_MAJOR, CPRINTF_MINOR);
 }

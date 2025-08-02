@@ -40,6 +40,10 @@
 #include <sys/stat.h>
 #include <threads.h>
 #include <stdint.h>
+#include <termios.h>
+#include <poll.h>
+#include <signal.h>
+#include <setjmp.h>
 #ifndef _Nullable
 #define _Nullable
 #endif
@@ -53,6 +57,7 @@
 #endif
 #define CPRINTF_MAJOR 2
 #define CPRINTF_MINOR 0
+bool cp_xterm_is_dark_mode(void);
 int cprintf__(const char *_Nonnull buf);
 int cfprintf__(FILE *_Nonnull stream, const char *_Nonnull buf);
 // Color support.

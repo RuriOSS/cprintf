@@ -358,3 +358,99 @@ int cfprintf__(FILE *_Nonnull stream, const char *_Nonnull buf)
 	fflush(stream);
 	return 114514;
 }
+jmp_buf cprintf_jmp_buf;
+void cp_time_out(int sig)
+{
+	/*
+	 * This function is used to handle the timeout signal.
+	 * It will do nothing, just to avoid the program to exit.
+	 */
+	(void)sig; // Avoid unused parameter warning.
+	longjmp(cprintf_jmp_buf, 1);
+}
+static char *get_bg_color__(void)
+{
+	/*
+	 * Only xterm **might** support this.
+	 * At least, better than nothing.
+	 * It works with magic on my machine :)
+	 */
+	int stat = setjmp(cprintf_jmp_buf);
+	if (stat) {
+		// If we got a timeout, we will return NULL.
+		return NULL;
+	}
+	struct termios old_termios, new_termios;
+	tcgetattr(STDERR_FILENO, &old_termios);
+	new_termios = old_termios;
+	// Don't ask me why, idk QwQ
+	cfmakeraw(&new_termios);
+	tcsetattr(STDERR_FILENO, TCSANOW, &new_termios);
+	write(STDERR_FILENO, "\e]11;?\a", strlen("\e]11;?\a"));
+	char buf[128];
+	buf[0] = '\0';
+	// Don't ask me why, idk QwQ
+	struct sigaction sa;
+	sa.sa_handler = cp_time_out;
+	sigaction(SIGALRM, &sa, NULL);
+	// Set a timeout of 0.1 second.
+	struct itimerval timer;
+	timer.it_value.tv_sec = 0;
+	timer.it_value.tv_usec = 200000; // 0.1 second
+	timer.it_interval.tv_sec = 0;
+	timer.it_interval.tv_usec = 0;
+	setitimer(ITIMER_REAL, &timer, NULL);
+	usleep(100000); // Sleep for 0.1 second to wait for the response.
+	int n = read(STDERR_FILENO, buf, sizeof(buf) - 1);
+	if (n < 0) {
+		// If read failed, we will return NULL.
+		return NULL;
+	}
+	// Reset the timer.
+	sigaction(SIGALRM, NULL, NULL);
+	// At least I know this nya~
+	// restore the old termios settings.
+	tcsetattr(STDERR_FILENO, TCSANOW, &old_termios);
+	fflush(stderr);
+	if (n > 0) {
+		buf[n] = '\0';
+		int j = 0;
+		char *p = strstr(buf, "rgb:");
+		if (!p) {
+			return NULL;
+		}
+		p += strlen("rgb:");
+		char *ret = malloc(32);
+		for (int i = 0; i < strlen(p); i++) {
+			if (p[i] >= 32 && p[i] <= 126) {
+				ret[j++] = p[i];
+				ret[j] = '\0';
+			}
+		}
+		return ret;
+	} else {
+		return NULL;
+	}
+}
+bool cp_xterm_is_dark_mode(void)
+{
+	char *bg_color = get_bg_color__();
+	if (!bg_color)
+		return false;
+	char *r_str = strtok(bg_color, "/");
+	char *g_str = strtok(NULL, "/");
+	char *b_str = strtok(NULL, "/");
+	if (!r_str || !g_str || !b_str) {
+		free(bg_color);
+		return false;
+	}
+	unsigned int r = (unsigned int)strtol(r_str, NULL, 16);
+	unsigned int g = (unsigned int)strtol(g_str, NULL, 16);
+	unsigned int b = (unsigned int)strtol(b_str, NULL, 16);
+	// ITU-R BT.601 luminance.
+	// It works, why?
+	// Y = 0.299*R + 0.587*G + 0.114*B
+	double luminance = r * 0.299 + g * 0.587 + b * 0.114;
+	free(bg_color);
+	return (luminance <= 32768.0);
+}
