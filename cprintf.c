@@ -434,6 +434,12 @@ static char *get_bg_color__(void)
 }
 bool cp_xterm_is_dark_mode(void)
 {
+	struct stat _stat_buf;
+	if (fstat(STDERR_FILENO, &_stat_buf) != 0 || !S_ISCHR(_stat_buf.st_mode)) {
+		// If stderr is not a terminal,
+		// we cannot determine the background color.
+		return false;
+	}
 	char *bg_color = get_bg_color__();
 	if (!bg_color)
 		return false;
