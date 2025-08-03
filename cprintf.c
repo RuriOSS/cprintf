@@ -396,11 +396,15 @@ static char *get_bg_color__(void)
 	// Set a timeout of 0.1 second.
 	struct itimerval timer;
 	timer.it_value.tv_sec = 0;
-	timer.it_value.tv_usec = 200000; // 0.1 second
+	// Timeout of 0.2 second.
+	// And we will wait for the response for 0.1 second.
+	// So the real timeout is 0.1 second.
+	timer.it_value.tv_usec = 200000;
 	timer.it_interval.tv_sec = 0;
 	timer.it_interval.tv_usec = 0;
 	setitimer(ITIMER_REAL, &timer, NULL);
-	usleep(100000); // Sleep for 0.1 second to wait for the response.
+	// Sleep for 0.1 second to wait for the response.
+	usleep(100000);
 	int n = read(STDERR_FILENO, buf, sizeof(buf) - 1);
 	if (n < 0) {
 		// If read failed, we will return NULL.
