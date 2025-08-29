@@ -1,5 +1,10 @@
 # Full specification:
 [SPECIFICATION](SPEC.md)
+# New in v2.1:
+Note that this is not a stable implementation.
+```c
+bool cp_xterm_is_dark_mode();
+```
 # New in v2.0:
 Say hello to `T()` `F()` macro with _Generic() support!      
 Usage:
@@ -19,7 +24,6 @@ cprintf("{}{}{}{}","xxxxx"); // Also boom!!!!!!
 printf("%s","xxxxx"); // Good!
 cprintf("{}","xxxxxx"); // Also good :)
 ```
-Update: cprintf can now recognise extra {} when running program when args of cprintf <= 15.      
 # About GNU C:
 cprintf uses GNU C11, port/cprintf.c is in pure C std.     
 # Let's make a colorful world!

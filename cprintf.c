@@ -57,7 +57,7 @@ void cprintf_free_buf__(void)
 	cprintf_buffer = NULL;
 	cprintf_buf_count = 0;
 }
-char *cprintf_regen_format__(const char *f, int limit)
+char *cprintf_regen_format__(const char *f)
 {
 	/*
 	 * This function will regenerate the format string
@@ -66,18 +66,12 @@ char *cprintf_regen_format__(const char *f, int limit)
 	 */
 	char *ret = strdup(cprintf_avoid_null__(f));
 	int j = 0;
-	// For the case that limit is 0, that means no limit.
-	// This is caused when args > 15, and we can't count it with CPRINTF_COUNT_ARGS.
-	if (limit == 0) {
-		limit = INT16_MAX;
-	}
 	int count = 0;
 	size_t len = cprintf_strlen__(f);
-	if (len == 0 || limit == 1) {
+	if (len == 0) {
 		cprintf_mark_buf__(ret);
 		return ret;
 	}
-	limit = limit - 1;
 	for (size_t i = 0; i < len - 1; i++) {
 		if (f[i] == '{' && f[i + 1] == '}') {
 			ret[j] = '%';
@@ -85,13 +79,6 @@ char *cprintf_regen_format__(const char *f, int limit)
 			j += 2;
 			i++;
 			count++;
-			if (count == limit) {
-				for (size_t k = i + 1; k < len - 1; k++) {
-					ret[j] = f[k];
-					j++;
-				}
-				break;
-			}
 		} else {
 			ret[j] = f[i];
 			j++;
