@@ -44,6 +44,7 @@
 #include <poll.h>
 #include <signal.h>
 #include <setjmp.h>
+#include <sys/time.h>
 #ifndef _Nullable
 #define _Nullable
 #endif
