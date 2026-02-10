@@ -66,7 +66,6 @@ char *cprintf_regen_format__(const char *f)
 	 */
 	char *ret = strdup(cprintf_avoid_null__(f));
 	int j = 0;
-	int count = 0;
 	size_t len = cprintf_strlen__(f);
 	if (len == 0) {
 		cprintf_mark_buf__(ret);
@@ -78,7 +77,6 @@ char *cprintf_regen_format__(const char *f)
 			ret[j + 1] = 's';
 			j += 2;
 			i++;
-			count++;
 		} else {
 			ret[j] = f[i];
 			j++;
@@ -373,7 +371,7 @@ static char *get_bg_color__(void)
 	// Don't ask me why, idk QwQ
 	cfmakeraw(&new_termios);
 	tcsetattr(STDERR_FILENO, TCSANOW, &new_termios);
-	write(STDERR_FILENO, "\e]11;?\a", strlen("\e]11;?\a"));
+	write(STDERR_FILENO, "\x1b]11;?\a", strlen("\x1b]11;?\a"));
 	char buf[128];
 	buf[0] = '\0';
 	// Don't ask me why, idk QwQ
@@ -412,7 +410,7 @@ static char *get_bg_color__(void)
 		}
 		p += strlen("rgb:");
 		char *ret = malloc(32);
-		for (int i = 0; i < strlen(p); i++) {
+		for (size_t i = 0; i < strlen(p); i++) {
 			if (p[i] >= 32 && p[i] <= 126) {
 				ret[j++] = p[i];
 				ret[j] = '\0';
