@@ -371,7 +371,7 @@ static char *get_bg_color__(void)
 	// Don't ask me why, idk QwQ
 	cfmakeraw(&new_termios);
 	tcsetattr(STDERR_FILENO, TCSANOW, &new_termios);
-	write(STDERR_FILENO, "\x1b]11;?\a", strlen("\x1b]11;?\a"));
+	write(STDERR_FILENO, "\033]11;?\a", strlen("\033]11;?\a"));
 	char buf[128];
 	buf[0] = '\0';
 	// Don't ask me why, idk QwQ
@@ -390,7 +390,7 @@ static char *get_bg_color__(void)
 	setitimer(ITIMER_REAL, &timer, NULL);
 	// Sleep for 0.1 second to wait for the response.
 	usleep(100000);
-	int n = read(STDERR_FILENO, buf, sizeof(buf) - 1);
+	ssize_t n = read(STDERR_FILENO, buf, sizeof(buf) - 1);
 	if (n < 0) {
 		// If read failed, we will return NULL.
 		return NULL;

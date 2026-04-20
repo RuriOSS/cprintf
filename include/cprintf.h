@@ -31,20 +31,20 @@
 #ifdef __linux__
 #define _GNU_SOURCE
 #endif
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
 #include <ctype.h>
-#include <sys/stat.h>
-#include <threads.h>
-#include <stdint.h>
-#include <termios.h>
 #include <poll.h>
-#include <signal.h>
 #include <setjmp.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 #include <sys/time.h>
+#include <termios.h>
+#include <threads.h>
+#include <unistd.h>
 #ifndef _Nullable
 #define _Nullable
 #endif
@@ -163,19 +163,19 @@ extern bool cprintf_print_color_only_tty;
 		cfp_ret__;                                                      \
 	})
 #define scprintf(format, ...)                                                                  \
-	{                                                                                      \
+	do {                                                                                   \
 		char *cp_buf__ = malloc((size_t)snprintf(NULL, 0, format, ##__VA_ARGS__) + 1); \
 		sprintf(cp_buf__, format, ##__VA_ARGS__);                                      \
 		cprintf__(cp_buf__);                                                           \
 		free(cp_buf__);                                                                \
-	}
+	} while (0)
 #define scfprintf(stream, format, ...)                                                          \
-	{                                                                                       \
+	do {                                                                                    \
 		char *cfp_buf__ = malloc((size_t)snprintf(NULL, 0, format, ##__VA_ARGS__) + 1); \
 		sprintf(cfp_buf__, format, ##__VA_ARGS__);                                      \
 		cfprintf__(stream, cfp_buf__);                                                  \
 		free(cfp_buf__);                                                                \
-	}
+	} while (0)
 // For generic support.
 char *cprintf_regen_format__(const char *f);
 void cprintf_free_buf__(void);
