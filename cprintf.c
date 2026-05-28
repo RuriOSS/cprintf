@@ -34,14 +34,16 @@
 //
 
 // For marking the buffer, so that it can be free() later.
+// NOLINTBEGIN
 static thread_local char **cprintf_buffer = NULL;
 static thread_local size_t cprintf_buf_count = 0;
+// NOLINTEND
 void cprintf_mark_buf__(char *b)
 {
 	/*
 	 * Mark the buffer, so that it can be free() later.
 	 */
-	cprintf_buffer = realloc(cprintf_buffer, (cprintf_buf_count + 1) * sizeof(char *));
+	cprintf_buffer = (char **)realloc((void *)cprintf_buffer, (cprintf_buf_count + 1) * sizeof(char *));
 	cprintf_buffer[cprintf_buf_count] = b;
 	cprintf_buf_count++;
 }
@@ -53,7 +55,7 @@ void cprintf_free_buf__(void)
 	for (size_t i = 0; i < cprintf_buf_count; i++) {
 		free(cprintf_buffer[i]);
 	}
-	free(cprintf_buffer);
+	free((void *)cprintf_buffer);
 	cprintf_buffer = NULL;
 	cprintf_buf_count = 0;
 }
@@ -93,6 +95,7 @@ char *cprintf_regen_format__(const char *f)
 //
 // Color support.
 //
+// NOLINTBEGIN
 struct CPRINTF_COLOR__ cprintf_color = {
 	.base = "254;228;208",
 	.black_fg = "\033[30m",
@@ -113,6 +116,7 @@ struct CPRINTF_COLOR__ cprintf_color = {
 	.white_bg = "\033[47m",
 };
 bool cprintf_print_color_only_tty = true;
+// NOLINTEND
 #define fprintf_only_tty(stream, ...)                                                               \
 	{                                                                                           \
 		if (!cprintf_print_color_only_tty) {                                                \
@@ -343,7 +347,9 @@ int cfprintf__(FILE *_Nonnull stream, const char *_Nonnull buf)
 	fflush(stream);
 	return 114514;
 }
+// NOLINTBEGIN
 jmp_buf cprintf_jmp_buf;
+// NOLINTEND
 void cp_time_out(int sig)
 {
 	/*
@@ -365,7 +371,8 @@ static char *get_bg_color__(void)
 		// If we got a timeout, we will return NULL.
 		return NULL;
 	}
-	struct termios old_termios, new_termios;
+	struct termios old_termios;
+	struct termios new_termios;
 	tcgetattr(STDERR_FILENO, &old_termios);
 	new_termios = old_termios;
 	// Don't ask me why, idk QwQ
@@ -417,9 +424,8 @@ static char *get_bg_color__(void)
 			}
 		}
 		return ret;
-	} else {
-		return NULL;
 	}
+	return NULL;
 }
 bool cp_xterm_is_dark_mode(void)
 {
@@ -430,8 +436,9 @@ bool cp_xterm_is_dark_mode(void)
 		return false;
 	}
 	char *bg_color = get_bg_color__();
-	if (!bg_color)
+	if (!bg_color) {
 		return false;
+	}
 	char *r_str = strtok(bg_color, "/");
 	char *g_str = strtok(NULL, "/");
 	char *b_str = strtok(NULL, "/");
@@ -445,7 +452,7 @@ bool cp_xterm_is_dark_mode(void)
 	// ITU-R BT.601 luminance.
 	// It works, why?
 	// Y = 0.299*R + 0.587*G + 0.114*B
-	double luminance = r * 0.299 + g * 0.587 + b * 0.114;
+	double luminance = (r * 0.299) + (g * 0.587) + (b * 0.114);
 	free(bg_color);
 	return (luminance <= 32768.0);
 }
