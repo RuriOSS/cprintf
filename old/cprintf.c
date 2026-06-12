@@ -5,7 +5,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2026 Moe-hacker
+ * Copyright (c) 2024 Moe-hacker
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,73 @@
  *
  */
 #include "include/cprintf.h"
+
+//
+// Generic support.
+//
+
+// For marking the buffer, so that it can be free() later.
+// NOLINTBEGIN
+static thread_local char **cprintf_buffer = NULL;
+static thread_local size_t cprintf_buf_count = 0;
+// NOLINTEND
+void cprintf_mark_buf__(char *b)
+{
+	/*
+	 * Mark the buffer, so that it can be free() later.
+	 */
+	cprintf_buffer = (char **)realloc((void *)cprintf_buffer, (cprintf_buf_count + 1) * sizeof(char *));
+	cprintf_buffer[cprintf_buf_count] = b;
+	cprintf_buf_count++;
+}
+void cprintf_free_buf__(void)
+{
+	/*
+	 * Free all the buffers that have been marked.
+	 */
+	for (size_t i = 0; i < cprintf_buf_count; i++) {
+		free(cprintf_buffer[i]);
+	}
+	free((void *)cprintf_buffer);
+	cprintf_buffer = NULL;
+	cprintf_buf_count = 0;
+}
+char *cprintf_regen_format__(const char *f)
+{
+	/*
+	 * This function will regenerate the format string
+	 * to replace all '{}' with '%s'.
+	 * If the input is NULL, it will return an empty string.
+	 */
+	char *ret = strdup(cprintf_avoid_null__(f));
+	int j = 0;
+	size_t len = cprintf_strlen__(f);
+	if (len == 0) {
+		cprintf_mark_buf__(ret);
+		return ret;
+	}
+	for (size_t i = 0; i < len - 1; i++) {
+		if (f[i] == '{' && f[i + 1] == '}') {
+			ret[j] = '%';
+			ret[j + 1] = 's';
+			j += 2;
+			i++;
+		} else {
+			ret[j] = f[i];
+			j++;
+		}
+	}
+	ret[j] = '\0';
+	if (f[len - 1] != '}') {
+		ret[j] = f[len - 1];
+		ret[j + 1] = '\0';
+	}
+	cprintf_mark_buf__(ret);
+	return ret;
+}
+//
+// Color support.
+//
 // NOLINTBEGIN
 struct CPRINTF_COLOR__ cprintf_color = {
 	.base = "254;228;208",
@@ -50,6 +117,41 @@ struct CPRINTF_COLOR__ cprintf_color = {
 };
 bool cprintf_print_color_only_tty = true;
 // NOLINTEND
+#define fprintf_only_tty(stream, ...)                                                               \
+	{                                                                                           \
+		if (!cprintf_print_color_only_tty) {                                                \
+			fprintf(stream, __VA_ARGS__);                                               \
+		} else {                                                                            \
+			struct stat _stat_buf;                                                      \
+			if (fstat(fileno(stream), &_stat_buf) == 0 && S_ISCHR(_stat_buf.st_mode)) { \
+				fprintf(stream, __VA_ARGS__);                                       \
+			}                                                                           \
+		}                                                                                   \
+	}
+static void fprint_rgb_fg_color(FILE *_Nonnull stream, const char *_Nonnull color)
+{
+	/*
+	 * print \033[1;38;2;R;G;Bm format color.
+	 */
+	char buf[17];
+	for (size_t i = 1; i < strlen(color) - 1; i++) {
+		buf[i - 1] = color[i];
+		buf[i] = 0;
+	}
+	fprintf_only_tty(stream, "\033[38;2;%sm", buf);
+}
+static void fprint_rgb_bg_color(FILE *_Nonnull stream, const char *_Nonnull color)
+{
+	/*
+	 * print \033[1;38;2;R;G;Bm format color.
+	 */
+	char buf[17];
+	for (size_t i = 1; i < strlen(color) - 1; i++) {
+		buf[i - 1] = color[i];
+		buf[i] = 0;
+	}
+	fprintf_only_tty(stream, "\033[48;2;%sm", buf);
+}
 static bool is_rgb_color(const char *_Nonnull color)
 {
 	/*
@@ -83,7 +185,7 @@ static bool is_rgb_color(const char *_Nonnull color)
 	}
 	return true;
 }
-static const char *cfprintf_print_fg_color(const char *_Nonnull buf, char **_Nonnull str, bool skip)
+static const char *cfprintf_print_fg_color(FILE *_Nonnull stream, const char *_Nonnull buf)
 {
 	/*
 	 * Only valid {color} will be recognized,
@@ -95,8 +197,7 @@ static const char *cfprintf_print_fg_color(const char *_Nonnull buf, char **_Non
 	char color[17] = { '\0' };
 	for (int i = 0; i < 16; i++) {
 		if (buf[i] == '\0') {
-			*str = realloc(*str, strlen(*str) + 2);
-			strncat(*str, "{", 1);
+			fprintf(stream, "{");
 			return buf;
 		}
 		if (buf[i] == '}') {
@@ -109,84 +210,38 @@ static const char *cfprintf_print_fg_color(const char *_Nonnull buf, char **_Non
 		color[i + 1] = 0;
 	}
 	if (strcmp(color, "{clear}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[0m", 4);
-		}
+		fprintf_only_tty(stream, "\033[0m");
 	} else if (strcmp(color, "{black}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.black_fg));
-			strncat(*str, cprintf_color.black_fg, strlen(cprintf_color.black_fg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.black_fg);
 	} else if (strcmp(color, "{red}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.red_fg));
-			strncat(*str, cprintf_color.red_fg, strlen(cprintf_color.red_fg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.red_fg);
 	} else if (strcmp(color, "{green}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.green_fg));
-			strncat(*str, cprintf_color.green_fg, strlen(cprintf_color.green_fg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.green_fg);
 	} else if (strcmp(color, "{yellow}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.yellow_fg));
-			strncat(*str, cprintf_color.yellow_fg, strlen(cprintf_color.yellow_fg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.yellow_fg);
 	} else if (strcmp(color, "{blue}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.blue_fg));
-			strncat(*str, cprintf_color.blue_fg, strlen(cprintf_color.blue_fg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.blue_fg);
 	} else if (strcmp(color, "{purple}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.purple_fg));
-			strncat(*str, cprintf_color.purple_fg, strlen(cprintf_color.purple_fg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.purple_fg);
 	} else if (strcmp(color, "{cyan}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.cyan_fg));
-			strncat(*str, cprintf_color.cyan_fg, strlen(cprintf_color.cyan_fg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.cyan_fg);
 	} else if (strcmp(color, "{white}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.white_fg));
-			strncat(*str, cprintf_color.white_fg, strlen(cprintf_color.white_fg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.white_fg);
 	} else if (strcmp(color, "{base}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 114);
-			strncat(*str, "\033[38;2;", 7);
-			strncat(*str, cprintf_color.base, strlen(cprintf_color.base));
-			strncat(*str, "m", 1);
-		}
+		fprintf_only_tty(stream, "\033[1;38;2;%sm", cprintf_color.base);
 	} else if (strcmp(color, "{underline}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[4m", 4);
-		}
+		fprintf_only_tty(stream, "\033[4m");
 	} else if (strcmp(color, "{highlight}") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[1m", 4);
-		}
+		fprintf_only_tty(stream, "\033[1m");
 	} else if (is_rgb_color(color)) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 114);
-			strcat(*str, "\033[38;2;");
-			strncat(*str, color + 1, strlen(color) - 2);
-			strcat(*str, "m");
-		}
+		fprint_rgb_fg_color(stream, color);
 	} else {
 		ret = buf;
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 2);
-			strncat(*str, "[", 1);
-		}
+		fprintf(stream, "{");
 	}
 	return ret;
 }
-static const char *cfprintf_print_bg_color(const char *_Nonnull buf, char **_Nonnull str, bool skip)
+static const char *cfprintf_print_bg_color(FILE *_Nonnull stream, const char *_Nonnull buf)
 {
 	/*
 	 * Only valid [color] will be recognized,
@@ -198,8 +253,7 @@ static const char *cfprintf_print_bg_color(const char *_Nonnull buf, char **_Non
 	char color[17] = { '\0' };
 	for (int i = 0; i < 16; i++) {
 		if (buf[i] == '\0') {
-			*str = realloc(*str, strlen(*str) + 2);
-			strncat(*str, "[", 1);
+			fprintf(stream, "[");
 			return buf;
 		}
 		if (buf[i] == ']') {
@@ -212,114 +266,87 @@ static const char *cfprintf_print_bg_color(const char *_Nonnull buf, char **_Non
 		color[i + 1] = 0;
 	}
 	if (strcmp(color, "[clear]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[0m", 4);
-		}
+		fprintf_only_tty(stream, "\033[0m");
 	} else if (strcmp(color, "[black]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.black_bg));
-			strncat(*str, cprintf_color.black_bg, strlen(cprintf_color.black_bg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.black_bg);
 	} else if (strcmp(color, "[red]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.red_bg));
-			strncat(*str, cprintf_color.red_bg, strlen(cprintf_color.red_bg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.red_bg);
 	} else if (strcmp(color, "[green]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.green_bg));
-			strncat(*str, cprintf_color.green_bg, strlen(cprintf_color.green_bg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.green_bg);
 	} else if (strcmp(color, "[yellow]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.yellow_bg));
-			strncat(*str, cprintf_color.yellow_bg, strlen(cprintf_color.yellow_bg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.yellow_bg);
 	} else if (strcmp(color, "[blue]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.blue_bg));
-			strncat(*str, cprintf_color.blue_bg, strlen(cprintf_color.blue_bg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.blue_bg);
 	} else if (strcmp(color, "[purple]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.purple_bg));
-			strncat(*str, cprintf_color.purple_bg, strlen(cprintf_color.purple_bg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.purple_bg);
 	} else if (strcmp(color, "[cyan]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.cyan_bg));
-			strncat(*str, cprintf_color.cyan_bg, strlen(cprintf_color.cyan_bg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.cyan_bg);
 	} else if (strcmp(color, "[white]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5 + strlen(cprintf_color.white_bg));
-			strncat(*str, cprintf_color.white_bg, strlen(cprintf_color.white_bg));
-		}
+		fprintf_only_tty(stream, "%s", cprintf_color.white_bg);
 	} else if (strcmp(color, "[base]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 114);
-			strncat(*str, "\033[1;48;2;", 7);
-			strncat(*str, cprintf_color.base, strlen(cprintf_color.base));
-			strncat(*str, "m", 1);
-		}
+		fprintf_only_tty(stream, "\033[1;48;2;%sm", cprintf_color.base);
 	} else if (strcmp(color, "[underline]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[4m", 4);
-		}
+		fprintf_only_tty(stream, "\033[4m");
 	} else if (strcmp(color, "[highlight]") == 0) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[1m", 4);
-		}
+		fprintf_only_tty(stream, "\033[1m");
 	} else if (is_rgb_color(color)) {
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 114);
-			strcat(*str, "\033[48;2;");
-			strncat(*str, color + 1, strlen(color) - 2);
-			strcat(*str, "m");
-		}
+		fprint_rgb_bg_color(stream, color);
 	} else {
 		ret = buf;
-		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 2);
-			strncat(*str, "[", 1);
-		}
+		fprintf(stream, "[");
 	}
 	return ret;
 }
-char *cprintf_regen_format(FILE *_Nonnull stream, const char *_Nonnull format)
+int cprintf__(const char *_Nonnull buf)
 {
-	bool skip = (cprintf_print_color_only_tty && !isatty(fileno(stream)));
-	char *ret = malloc(strlen(format) + 1);
-	ret[0] = '\0';
 	const char *p = NULL;
-	p = format;
-	for (size_t i = 0; i < strlen(format); i++) {
+	p = buf;
+	for (size_t i = 0; i < strlen(buf); i++) {
 		// Search for '{'.
 		if (*p == '{') {
 			// *p will be moved because we need to skip the {color} string.
-			p = cfprintf_print_fg_color(p, &ret, skip);
+			p = cfprintf_print_fg_color(stdout, p);
 		} else if (*p == '[') {
 			// *p will be moved because we need to skip the [color] string.
-			p = cfprintf_print_bg_color(p, &ret, skip);
+			p = cfprintf_print_bg_color(stdout, p);
 		} else {
-			ret = realloc(ret, strlen(ret) + 2);
-			strncat(ret, p, 1);
+			printf("%c", *p);
 		}
 		// Recompute the value of i.
-		i = (size_t)(p - format);
+		i = (size_t)(p - buf);
 		// Goto the next charactor.
 		p = &(p[1]);
 	}
-	if (!skip) {
-		ret = realloc(ret, strlen(ret) + 5);
-		strncat(ret, "\033[0m", 4);
-	}
-	return ret;
+	// We will always reset the color in the end.
+	fprintf_only_tty(stdout, "\033[0m");
+	fflush(stdout);
+	return 114514;
 }
-
+int cfprintf__(FILE *_Nonnull stream, const char *_Nonnull buf)
+{
+	const char *p = NULL;
+	p = buf;
+	for (size_t i = 0; i < strlen(buf); i++) {
+		// Search for '{' or '['.
+		if (*p == '{') {
+			// *p will be moved because we need to skip the {color} string.
+			p = cfprintf_print_fg_color(stream, p);
+		} else if (*p == '[') {
+			// *p will be moved because we need to skip the {color} string.
+			p = cfprintf_print_bg_color(stream, p);
+		} else {
+			fprintf(stream, "%c", *p);
+		}
+		// Recompute the value of i.
+		i = (size_t)(p - buf);
+		// Goto the next charactor.
+		p = &(p[1]);
+	}
+	// We will always reset the color in the end.
+	fprintf_only_tty(stream, "\033[0m");
+	fflush(stream);
+	return 114514;
+}
 // NOLINTBEGIN
 jmp_buf cprintf_jmp_buf;
 // NOLINTEND
