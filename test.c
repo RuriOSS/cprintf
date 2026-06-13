@@ -15,5 +15,13 @@ int main(void)
 	cprintf("[255;255;255]                [clear]\n");
 	cprintf("[245;170;185]                [clear]\n");
 	cprintf("[91;207;250]                [clear]\n");
+	cprintf("{red}red{green}green{blue}blue{yellow}yellow{purple}purple{cyan}cyan{white}white{black}black{clear}\n");
+	cprintf("[red]red[green]green[blue]blue[yellow]yellow[purple]purple[cyan]cyan[white]white[black]black[clear]\n");
+	if (cp_xterm_is_dark_mode()) {
+		cprintf("{green}Dark mode is enabled\n");
+	} else {
+		cprintf("{red}Dark mode is not enabled{clear}\n");
+	}
+	cprintf("cprintf version: %d.%d\n", CPRINTF_MAJOR, CPRINTF_MINOR);
 	return 0;
 }
