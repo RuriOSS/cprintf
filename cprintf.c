@@ -83,7 +83,7 @@ static bool is_rgb_color(const char *_Nonnull color)
 	}
 	return true;
 }
-static const char *cfprintf_print_fg_color(const char *_Nonnull buf, char **_Nonnull str, bool skip)
+static const char *cprintf_add_fg_color(const char *_Nonnull buf, char **_Nonnull str, bool skip)
 {
 	/*
 	 * Only valid {color} will be recognized,
@@ -96,7 +96,7 @@ static const char *cfprintf_print_fg_color(const char *_Nonnull buf, char **_Non
 	for (int i = 0; i < 16; i++) {
 		if (buf[i] == '\0') {
 			*str = realloc(*str, strlen(*str) + 2);
-			strncat(*str, "{", 1);
+			strcat(*str, "{");
 			return buf;
 		}
 		if (buf[i] == '}') {
@@ -110,8 +110,8 @@ static const char *cfprintf_print_fg_color(const char *_Nonnull buf, char **_Non
 	}
 	if (strcmp(color, "{clear}") == 0) {
 		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[0m", 4);
+			*str = realloc(*str, strlen(*str) + 10);
+			strcat(*str, "\033[0m");
 		}
 	} else if (strcmp(color, "{black}") == 0) {
 		if (!skip) {
@@ -156,19 +156,19 @@ static const char *cfprintf_print_fg_color(const char *_Nonnull buf, char **_Non
 	} else if (strcmp(color, "{base}") == 0) {
 		if (!skip) {
 			*str = realloc(*str, strlen(*str) + 114);
-			strncat(*str, "\033[38;2;", 7);
+			strcat(*str, "\033[38;2;");
 			strncat(*str, cprintf_color.base, strlen(cprintf_color.base));
-			strncat(*str, "m", 1);
+			strcat(*str, "m");
 		}
 	} else if (strcmp(color, "{underline}") == 0) {
 		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[4m", 4);
+			*str = realloc(*str, strlen(*str) + 10);
+			strcat(*str, "\033[4m");
 		}
 	} else if (strcmp(color, "{highlight}") == 0) {
 		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[1m", 4);
+			*str = realloc(*str, strlen(*str) + 10);
+			strcat(*str, "\033[1m");
 		}
 	} else if (is_rgb_color(color)) {
 		if (!skip) {
@@ -181,12 +181,12 @@ static const char *cfprintf_print_fg_color(const char *_Nonnull buf, char **_Non
 		ret = buf;
 		if (!skip) {
 			*str = realloc(*str, strlen(*str) + 2);
-			strncat(*str, "[", 1);
+			strcat(*str, "{");
 		}
 	}
 	return ret;
 }
-static const char *cfprintf_print_bg_color(const char *_Nonnull buf, char **_Nonnull str, bool skip)
+static const char *cprintf_add_bg_color(const char *_Nonnull buf, char **_Nonnull str, bool skip)
 {
 	/*
 	 * Only valid [color] will be recognized,
@@ -199,7 +199,7 @@ static const char *cfprintf_print_bg_color(const char *_Nonnull buf, char **_Non
 	for (int i = 0; i < 16; i++) {
 		if (buf[i] == '\0') {
 			*str = realloc(*str, strlen(*str) + 2);
-			strncat(*str, "[", 1);
+			strcat(*str, "[");
 			return buf;
 		}
 		if (buf[i] == ']') {
@@ -213,8 +213,8 @@ static const char *cfprintf_print_bg_color(const char *_Nonnull buf, char **_Non
 	}
 	if (strcmp(color, "[clear]") == 0) {
 		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[0m", 4);
+			*str = realloc(*str, strlen(*str) + 10);
+			strcat(*str, "\033[0m");
 		}
 	} else if (strcmp(color, "[black]") == 0) {
 		if (!skip) {
@@ -261,17 +261,17 @@ static const char *cfprintf_print_bg_color(const char *_Nonnull buf, char **_Non
 			*str = realloc(*str, strlen(*str) + 114);
 			strncat(*str, "\033[1;48;2;", 7);
 			strncat(*str, cprintf_color.base, strlen(cprintf_color.base));
-			strncat(*str, "m", 1);
+			strcat(*str, "m");
 		}
 	} else if (strcmp(color, "[underline]") == 0) {
 		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[4m", 4);
+			*str = realloc(*str, strlen(*str) + 10);
+			strcat(*str, "\033[4m");
 		}
 	} else if (strcmp(color, "[highlight]") == 0) {
 		if (!skip) {
-			*str = realloc(*str, strlen(*str) + 5);
-			strncat(*str, "\033[1m", 4);
+			*str = realloc(*str, strlen(*str) + 10);
+			strcat(*str, "\033[1m");
 		}
 	} else if (is_rgb_color(color)) {
 		if (!skip) {
@@ -284,7 +284,7 @@ static const char *cfprintf_print_bg_color(const char *_Nonnull buf, char **_Non
 		ret = buf;
 		if (!skip) {
 			*str = realloc(*str, strlen(*str) + 2);
-			strncat(*str, "[", 1);
+			strcat(*str, "[");
 		}
 	}
 	return ret;
@@ -300,10 +300,10 @@ char *cprintf_regen_format(FILE *_Nonnull stream, const char *_Nonnull format)
 		// Search for '{'.
 		if (*p == '{') {
 			// *p will be moved because we need to skip the {color} string.
-			p = cfprintf_print_fg_color(p, &ret, skip);
+			p = cprintf_add_fg_color(p, &ret, skip);
 		} else if (*p == '[') {
 			// *p will be moved because we need to skip the [color] string.
-			p = cfprintf_print_bg_color(p, &ret, skip);
+			p = cprintf_add_bg_color(p, &ret, skip);
 		} else {
 			ret = realloc(ret, strlen(ret) + 2);
 			strncat(ret, p, 1);
@@ -315,7 +315,7 @@ char *cprintf_regen_format(FILE *_Nonnull stream, const char *_Nonnull format)
 	}
 	if (!skip) {
 		ret = realloc(ret, strlen(ret) + 5);
-		strncat(ret, "\033[0m", 4);
+		strcat(ret, "\033[0m");
 	}
 	return ret;
 }

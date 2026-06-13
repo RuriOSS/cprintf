@@ -26,7 +26,6 @@
  * SOFTWARE.
  *
  */
-// NOLINTBEGIN
 #pragma once
 #ifdef __linux__
 #define _GNU_SOURCE
@@ -59,8 +58,6 @@
 #define CPRINTF_MAJOR 3
 #define CPRINTF_MINOR 0
 bool cp_xterm_is_dark_mode(void);
-int cprintf__(const char *_Nonnull buf);
-int cfprintf__(FILE *_Nonnull stream, const char *_Nonnull buf);
 // Color support.
 struct CPRINTF_COLOR__ {
 	char *base;
@@ -83,7 +80,6 @@ struct CPRINTF_COLOR__ {
 };
 extern struct CPRINTF_COLOR__ cprintf_color;
 #define cprintf_base_color cprintf_color.base
-
 // Do not print color if the stream is not a terminal.
 extern bool cprintf_print_color_only_tty;
 char *cprintf_regen_format(FILE *_Nonnull stream, const char *_Nonnull format);
