@@ -23,10 +23,10 @@ Note that cprintf() will always clear the color in the end once you call it, but
 #include "include/cprintf.h"
 int main()
 {
-	cprintf("[91;207;250]                [clear]\n");
-	cprintf("[245;170;185]                [clear]\n");
-	cprintf("[255;255;255]                [clear]\n");
-	cprintf("[245;170;185]                [clear]\n");
-	cprintf("[91;207;250]                [clear]\n");
+	cprintf("[green]  [blue]  [green]    [red]  [green]    [clear]\n");
+	cprintf("[red]  [green]  [red]  [blue]  [green]  [blue]  [red]  [clear]\n");
+	cprintf("[green]  [blue]  [green]    [red]  [green]    [clear]\n");
+	cprintf("[green]  [red]  [green]    [blue]  [green]    [clear]\n");
+	cprintf("[blue]  [green]  [blue]  [red]  [green]  [red]  [blue]  [clear]\n");
 }
 ```
