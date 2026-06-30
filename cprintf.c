@@ -402,24 +402,24 @@ static char *get_bg_color__(void)
 	}
 	return NULL;
 }
-bool cp_xterm_is_dark_mode(void)
+int cp_xterm_is_dark_mode(void)
 {
 	struct stat _stat_buf;
 	if (fstat(STDERR_FILENO, &_stat_buf) != 0 || !S_ISCHR(_stat_buf.st_mode)) {
 		// If stderr is not a terminal,
 		// we cannot determine the background color.
-		return false;
+		return -1;
 	}
 	char *bg_color = get_bg_color__();
 	if (!bg_color) {
-		return false;
+		return -1;
 	}
 	char *r_str = strtok(bg_color, "/");
 	char *g_str = strtok(NULL, "/");
 	char *b_str = strtok(NULL, "/");
 	if (!r_str || !g_str || !b_str) {
 		free(bg_color);
-		return false;
+		return -1;
 	}
 	unsigned int r = (unsigned int)strtol(r_str, NULL, 16);
 	unsigned int g = (unsigned int)strtol(g_str, NULL, 16);
@@ -429,5 +429,5 @@ bool cp_xterm_is_dark_mode(void)
 	// Y = 0.299*R + 0.587*G + 0.114*B
 	double luminance = (r * 0.299) + (g * 0.587) + (b * 0.114);
 	free(bg_color);
-	return (luminance <= 32768.0);
+	return (luminance <= 32768.0) ? 1 : 0;
 }

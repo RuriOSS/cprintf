@@ -56,8 +56,8 @@
 #define false ((_Bool)0u)
 #endif
 #define CPRINTF_MAJOR 3
-#define CPRINTF_MINOR 0
-bool cp_xterm_is_dark_mode(void);
+#define CPRINTF_MINOR 1
+int cp_xterm_is_dark_mode(void);
 // Color support.
 struct CPRINTF_COLOR__ {
 	char *base;
