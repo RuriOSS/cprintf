@@ -83,19 +83,29 @@ struct CPRINTF_COLOR__ cprintf_color(int req, char *color, char *value);
 // Do not print color if the stream is not a terminal.
 bool cprintf_print_color_only_tty(int req);
 char *cprintf_regen_format(FILE *_Nonnull stream, const char *_Nonnull format);
-#define cprintf(format, ...)                                            \
-	({                                                              \
-		int cfp_ret__ = 0;                                      \
-		char *cfp_buf__ = cprintf_regen_format(stdout, format); \
-		cfp_ret__ = printf(cfp_buf__, ##__VA_ARGS__);           \
-		free(cfp_buf__);                                        \
-		cfp_ret__;                                              \
+#define cprintf(format, ...)                                                     \
+	({                                                                       \
+		int cfp_ret__ = 0;                                               \
+		char *cfp_buf__ = cprintf_regen_format(stdout, format);          \
+		if (!cfp_buf__) {                                                \
+			fprintf(stderr, "CPRINTF: Memory allocation failed.\n"); \
+			cfp_ret__ = -1;                                          \
+		} else {                                                         \
+			cfp_ret__ = printf(cfp_buf__, ##__VA_ARGS__);            \
+			free(cfp_buf__);                                         \
+		}                                                                \
+		cfp_ret__;                                                       \
 	})
-#define cfprintf(stream, format, ...)                                   \
-	({                                                              \
-		int cfp_ret__ = 0;                                      \
-		char *cfp_buf__ = cprintf_regen_format(stream, format); \
-		cfp_ret__ = fprintf(stream, cfp_buf__, ##__VA_ARGS__);  \
-		free(cfp_buf__);                                        \
-		cfp_ret__;                                              \
+#define cfprintf(stream, format, ...)                                            \
+	({                                                                       \
+		int cfp_ret__ = 0;                                               \
+		char *cfp_buf__ = cprintf_regen_format(stream, format);          \
+		if (!cfp_buf__) {                                                \
+			fprintf(stderr, "CPRINTF: Memory allocation failed.\n"); \
+			cfp_ret__ = -1;                                          \
+		} else {                                                         \
+			cfp_ret__ = fprintf(stream, cfp_buf__, ##__VA_ARGS__);   \
+			free(cfp_buf__);                                         \
+		}                                                                \
+		cfp_ret__;                                                       \
 	})
