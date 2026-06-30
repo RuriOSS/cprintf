@@ -12,9 +12,9 @@ int main(void)
 	cprintf("[nothing]{not}{[[[[[{0;999;000}This is nothing.\n");
 	cprintf("{red}red{green}green{blue}blue{yellow}yellow{purple}purple{cyan}cyan{white}white{black}black{clear}\n");
 	cprintf("[red]red[green]green[blue]blue[yellow]yellow[purple]purple[cyan]cyan[white]white[black]black[clear]\n");
-	cprintf_color.red_bg = "\033[48;2;216;106;103m";
-	cprintf_color.green_bg = "\033[48;2;105;161;136m";
-	cprintf_color.blue_bg = "\033[48;2;71;96;175m";
+	cprintf_color(1, "red_bg", "\033[48;2;216;106;103m");
+	cprintf_color(1, "green_bg", "\033[48;2;105;161;136m");
+	cprintf_color(1, "blue_bg", "\033[48;2;71;96;175m");
 	cprintf("\n");
 	cprintf("[green]  [blue]  [green]    [red]  [green]    [clear]\n");
 	cprintf("[red]  [green]  [red]  [blue]  [green]  [blue]  [red]  [clear]\n");

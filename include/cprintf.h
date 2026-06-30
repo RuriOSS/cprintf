@@ -78,10 +78,10 @@ struct CPRINTF_COLOR__ {
 	char *white_bg;
 	char *black_bg;
 };
-extern struct CPRINTF_COLOR__ cprintf_color;
-#define cprintf_base_color cprintf_color.base
+struct CPRINTF_COLOR__ cprintf_color(int req, char *color, char *value);
+#define cprintf_base_color cprintf_color(-1, NULL, NULL).base
 // Do not print color if the stream is not a terminal.
-extern bool cprintf_print_color_only_tty;
+bool cprintf_print_color_only_tty(int req);
 char *cprintf_regen_format(FILE *_Nonnull stream, const char *_Nonnull format);
 #define cprintf(format, ...)                                            \
 	({                                                              \
