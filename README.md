@@ -1,5 +1,5 @@
 # About:
-Just do one stupid thing: replace `[color]` and `{color}` in format with ANSI escape codes. That's it.      
+Just do one stupid thing: replace `[color]` and `{color}` in `format` of `printf(format, ...)` with ANSI escape codes. That's it.      
 These color format will be recognized:      
 ```
 clear     :reset the color.
