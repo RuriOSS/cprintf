@@ -28,7 +28,6 @@
  *
  */
 #include "include/cprintf.h"
-// NOLINTBEGIN
 static jmp_buf *cprintf_jmp_buf(int req, jmp_buf *buf)
 {
 	static thread_local jmp_buf *ret_buf;
@@ -37,7 +36,6 @@ static jmp_buf *cprintf_jmp_buf(int req, jmp_buf *buf)
 	}
 	return ret_buf;
 }
-// NOLINTEND
 static char *cp_add_str(char *str, const char *add)
 {
 	/*
@@ -59,7 +57,6 @@ static char *cp_add_str(char *str, const char *add)
 	}
 	return str;
 }
-// NOLINTBEGIN
 struct CPRINTF_COLOR__ cprintf_color(int req, char *color, char *value)
 {
 	static thread_local struct CPRINTF_COLOR__ cprintf_color = {
@@ -131,7 +128,6 @@ bool cprintf_print_color_only_tty(int req)
 	}
 	return print_color_only_tty;
 }
-// NOLINTEND
 static bool is_rgb_color(const char *_Nonnull color)
 {
 	/*
